@@ -1,0 +1,111 @@
+#pragma once
+#include <cmath>
+
+namespace lab5 { 
+
+	using namespace System;
+	using namespace System::ComponentModel;
+	using namespace System::Collections;
+	using namespace System::Windows::Forms;
+	using namespace System::Data;
+	using namespace System::Drawing;
+	using namespace System::Drawing::Drawing2D;
+
+	public ref class MyForm : public System::Windows::Forms::Form
+	{
+	public:
+		MyForm(void)
+		{
+			InitializeComponent();
+			this->Text = "Lab 5: Koch Snowflake (Variant 10)";
+			this->Size = System::Drawing::Size(950, 600);
+			this->DoubleBuffered = true;
+		}
+
+	protected:
+		~MyForm()
+		{
+			if (components) delete components;
+		}
+
+	private:
+		System::ComponentModel::Container^ components;
+
+		// --- ЗАДАЧА 1: Крива Безьє ---
+		void DrawBezierCurve(Graphics^ g, Pen^ pen, PointF p1, PointF p2, PointF p3, PointF p4) {
+			PointF prevPoint = p1;
+			for (float t = 0; t <= 1.0f; t += 0.005f) {
+				float u = 1 - t;
+				float tt = t * t;
+				float uu = u * u;
+				float uuu = uu * u;
+				float ttt = tt * t;
+
+				float x = uuu * p1.X + 3 * uu * t * p2.X + 3 * u * tt * p3.X + ttt * p4.X;
+				float y = uuu * p1.Y + 3 * uu * t * p2.Y + 3 * u * tt * p3.Y + ttt * p4.Y;
+
+				PointF currPoint = PointF(x, y);
+				g->DrawLine(pen, prevPoint, currPoint);
+				prevPoint = currPoint;
+			}
+		}
+
+		// --- ЗАДАЧА 2: Фрактал Коха (Сніжинка) ---
+		void DrawKochLine(Graphics^ g, Pen^ pen, PointF p1, PointF p5, int k) {
+			if (k == 0) {
+				g->DrawLine(pen, p1, p5);
+			}
+			else {
+				float dx = p5.X - p1.X;
+				float dy = p5.Y - p1.Y;
+				PointF p2(p1.X + dx / 3.0f, p1.Y + dy / 3.0f);
+				PointF p4(p1.X + 2 * dx / 3.0f, p1.Y + 2 * dy / 3.0f);
+
+				float angle = -Math::PI / 3.0;
+				float vx = p4.X - p2.X;
+				float vy = p4.Y - p2.Y;
+				float x3 = p2.X + vx * Math::Cos(angle) - vy * Math::Sin(angle);
+				float y3 = p2.Y + vx * Math::Sin(angle) + vy * Math::Cos(angle);
+				PointF p3(x3, y3);
+
+				DrawKochLine(g, pen, p1, p2, k - 1);
+				DrawKochLine(g, pen, p2, p3, k - 1);
+				DrawKochLine(g, pen, p3, p4, k - 1);
+				DrawKochLine(g, pen, p4, p5, k - 1);
+			}
+		}
+
+		void DrawKochSnowflake(Graphics^ g, Pen^ pen, PointF p1, PointF p2, PointF p3, int k) {
+			DrawKochLine(g, pen, p1, p2, k);
+			DrawKochLine(g, pen, p2, p3, k);
+			DrawKochLine(g, pen, p3, p1, k);
+		}
+
+		void InitializeComponent(void)
+		{
+			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+			this->Text = L"Lab 5 (Variant 10)";
+			this->Paint += gcnew System::Windows::Forms::PaintEventHandler(this, &MyForm::MyForm_Paint);
+		}
+
+		System::Void MyForm_Paint(System::Object^ sender, System::Windows::Forms::PaintEventArgs^ e) {
+			Graphics^ g = e->Graphics;
+			g->SmoothingMode = SmoothingMode::HighQuality;
+
+			// 1. Крива Безьє (Червона)
+			Pen^ redPen = gcnew Pen(Color::Red, 2);
+			PointF b1(50, 300); PointF b2(100, 50);
+			PointF b3(300, 50); PointF b4(350, 300);
+			DrawBezierCurve(g, redPen, b1, b2, b3, b4);
+			g->DrawString("Bezier Curve", this->Font, Brushes::Black, 150, 20);
+
+			// 2. Фрактал Коха (Синій)
+			Pen^ bluePen = gcnew Pen(Color::Blue, 1);
+			PointF k1(650, 100);
+			PointF k2(800, 400);
+			PointF k3(500, 400);
+			DrawKochSnowflake(g, bluePen, k1, k2, k3, 4); // Порядок 4
+			g->DrawString("Koch Snowflake", this->Font, Brushes::Black, 600, 20);
+		}
+	};
+}
